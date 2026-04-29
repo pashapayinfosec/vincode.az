@@ -1,34 +1,35 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* VINCheck Global Styles */
+
+.font-mono-vin {
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.gold-glow {
+  box-shadow: 0 0 0 1px rgba(245, 200, 75, 0.22), 0 10px 30px rgba(245, 200, 75, 0.08);
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.gold-border {
+  border: 1px solid rgba(245, 200, 75, 0.22);
 }
 
-.App-link {
-    color: #61dafb;
+.grid-bg {
+  position: relative;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.grid-bg::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.3;
+}
+
+.hero-gradient {
+  background: radial-gradient(600px circle at 20% 10%, rgba(245,200,75,0.12), transparent 55%),
+              radial-gradient(700px circle at 80% 0%, rgba(77,163,255,0.08), transparent 60%);
 }
