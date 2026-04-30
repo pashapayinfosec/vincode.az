@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Users } from "lucide-react";
+import { Users, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -11,20 +13,28 @@ export default function AdminCustomers() {
   const navigate = useNavigate();
   const token = localStorage.getItem("admin_token");
   const [customers, setCustomers] = useState([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!token) { navigate("/admin/login"); return; }
     fetchCustomers();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (searchTerm = "") => {
     try {
-      const res = await axios.get(`${API}/admin/customers?token=${token}`);
+      const params = new URLSearchParams({ token });
+      if (searchTerm) params.append("search", searchTerm);
+      const res = await axios.get(`${API}/admin/customers?${params.toString()}`);
       setCustomers(res.data);
     } catch (err) {
       if (err.response?.status === 401) navigate("/admin/login");
       toast.error("Məlumat yüklənə bilmədi");
     }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchCustomers(search);
   };
 
   return (
@@ -50,11 +60,26 @@ export default function AdminCustomers() {
       </header>
 
       <div className="pt-24 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Users className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold" style={{fontFamily: 'Space Grotesk'}}>Müştərilər</h1>
-          <span className="text-sm text-muted-foreground">({customers.length})</span>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Users className="w-6 h-6 text-primary" />
+            <h1 className="text-2xl font-bold" style={{fontFamily: 'Space Grotesk'}}>Müştərilər</h1>
+            <span className="text-sm text-muted-foreground">({customers.length})</span>
+          </div>
         </div>
+
+        {/* Search */}
+        <form onSubmit={handleSearch} className="flex gap-2 mb-6 max-w-md">
+          <Input
+            placeholder="Ad, email, telefon ilə axtar..."
+            className="h-10 bg-card border-border"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button type="submit" size="sm" className="bg-primary text-primary-foreground h-10 px-4">
+            <Search className="w-4 h-4" />
+          </Button>
+        </form>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
@@ -70,11 +95,13 @@ export default function AdminCustomers() {
               </thead>
               <tbody>
                 {customers.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Müştəri yoxdur</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    {search ? "Nəticə tapılmadı" : "Müştəri yoxdur"}
+                  </td></tr>
                 ) : (
                   customers.map((c, i) => (
                     <tr key={i} className="border-b border-border hover:bg-[rgba(245,200,75,0.03)]">
-                      <td className="p-4">{c.name}</td>
+                      <td className="p-4 font-medium">{c.name}</td>
                       <td className="p-4 text-muted-foreground">{c.phone}</td>
                       <td className="p-4 text-muted-foreground">{c.email || '-'}</td>
                       <td className="p-4 text-muted-foreground">{c.telegram || '-'}</td>

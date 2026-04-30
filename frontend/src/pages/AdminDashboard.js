@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Package, CreditCard, Clock, CheckCircle, Users, Settings, LogOut, Send, Eye } from "lucide-react";
+import { Package, CreditCard, Clock, CheckCircle, LogOut, Eye, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -13,6 +14,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const token = localStorage.getItem("admin_token");
 
   useEffect(() => {
@@ -23,11 +26,14 @@ export default function AdminDashboard() {
     fetchData();
   }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
+      const params = new URLSearchParams({ token, status: filter });
+      if (search) params.append("search", search);
+      
       const [statsRes, ordersRes] = await Promise.all([
         axios.get(`${API}/admin/stats?token=${token}`),
-        axios.get(`${API}/admin/orders?token=${token}&status=${filter}`)
+        axios.get(`${API}/admin/orders?${params.toString()}`)
       ]);
       setStats(statsRes.data);
       setOrders(ordersRes.data);
@@ -36,8 +42,19 @@ export default function AdminDashboard() {
         localStorage.removeItem("admin_token");
         navigate("/admin/login");
       }
-      toast.error("Məlumat yüklənə bilmədi");
     }
+  }, [token, filter, search, navigate]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+    toast.success("Yeniləndi");
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchData();
   };
 
   const handleLogout = () => {
@@ -113,6 +130,26 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* Search */}
+          <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+            <Input
+              data-testid="admin-search-input"
+              placeholder="VIN, ad, email, telefon ilə axtar..."
+              className="h-10 bg-card border-border"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Button type="submit" size="sm" className="bg-primary text-primary-foreground h-10 px-4">
+              <Search className="w-4 h-4" />
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleRefresh} className="h-10 px-4 border-border">
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </form>
+        </div>
+
         {/* Filter Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
           {[
@@ -153,13 +190,18 @@ export default function AdminDashboard() {
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">Sifariş yoxdur</td>
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      {search ? "Axtarış nəticəsi tapılmadı" : "Sifariş yoxdur"}
+                    </td>
                   </tr>
                 ) : (
                   orders.map((order) => (
-                    <tr key={order.order_id} className="border-b border-border hover:bg-[rgba(245,200,75,0.03)] transition-colors">
+                    <tr key={order.order_id} className="border-b border-border hover:bg-[rgba(245,200,75,0.03)] transition-colors cursor-pointer" onClick={() => navigate(`/admin/orders/${order.order_id}`)}>
                       <td className="p-4 font-mono-vin text-xs">{order.vin}</td>
-                      <td className="p-4">{order.name}</td>
+                      <td className="p-4">
+                        <div>{order.name}</div>
+                        <div className="text-xs text-muted-foreground">{order.phone}</div>
+                      </td>
                       <td className="p-4 text-xs text-muted-foreground">{order.email || order.telegram || '-'}</td>
                       <td className="p-4">
                         <span className={`inline-flex px-2 py-1 rounded-md text-xs border ${paymentBadge(order.payment_status)}`}>
@@ -178,7 +220,7 @@ export default function AdminDashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/admin/orders/${order.order_id}`)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${order.order_id}`); }}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -189,6 +231,11 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
+          {orders.length > 0 && (
+            <div className="p-4 border-t border-border text-xs text-muted-foreground text-center">
+              Cəmi: {orders.length} sifariş
+            </div>
+          )}
         </div>
       </div>
     </div>

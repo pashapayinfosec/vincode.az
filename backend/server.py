@@ -289,13 +289,27 @@ async def admin_login(creds: AdminLogin):
     return {"token": token, "username": admin["username"]}
 
 @api_router.get("/admin/orders")
-async def get_admin_orders(token: str = "", status: str = ""):
-    """Get all orders for admin"""
+async def get_admin_orders(token: str = "", status: str = "", search: str = "", payment: str = ""):
+    """Get all orders for admin with search and filters"""
     await verify_admin_token(token)
     
     query = {}
     if status:
         query["status"] = status
+    if payment:
+        query["payment_status"] = payment
+    
+    # Search by VIN, name, email, telegram, tracking code
+    if search:
+        search_upper = search.upper()
+        query["$or"] = [
+            {"vin": {"$regex": search_upper, "$options": "i"}},
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"telegram": {"$regex": search, "$options": "i"}},
+            {"tracking_code": {"$regex": search_upper, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}}
+        ]
     
     orders = await db.orders.find(query).sort("created_at", -1).to_list(500)
     return [serialize_doc(o) for o in orders]
@@ -370,6 +384,17 @@ async def send_order_result(order_id: str, token: str = ""):
     else:
         return {"message": "N\u0259tic\u0259 g\u00f6nd\u0259rildi olaraq qeyd edildi (bildiri\u015f konfiqurasiya edilm\u0259yib)", "sent": False}
 
+@api_router.delete("/admin/orders/{order_id}")
+async def delete_order(order_id: str, token: str = ""):
+    """Delete an order"""
+    await verify_admin_token(token)
+    
+    result = await db.orders.delete_one({"order_id": order_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sifari\u015f tap\u0131lmad\u0131")
+    
+    return {"message": "Sifari\u015f silindi"}
+
 @api_router.get("/admin/stats")
 async def get_admin_stats(token: str = ""):
     """Get dashboard statistics"""
@@ -399,11 +424,20 @@ async def get_admin_stats(token: str = ""):
     }
 
 @api_router.get("/admin/customers")
-async def get_admin_customers(token: str = ""):
-    """Get customer list"""
+async def get_admin_customers(token: str = "", search: str = ""):
+    """Get customer list with search"""
     await verify_admin_token(token)
     
-    orders = await db.orders.find({}, {"_id": 0, "name": 1, "phone": 1, "email": 1, "telegram": 1, "created_at": 1}).sort("created_at", -1).to_list(500)
+    query = {}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"telegram": {"$regex": search, "$options": "i"}}
+        ]
+    
+    orders = await db.orders.find(query, {"_id": 0, "name": 1, "phone": 1, "email": 1, "telegram": 1, "created_at": 1}).sort("created_at", -1).to_list(500)
     
     # Deduplicate by email/phone
     seen = set()
@@ -412,6 +446,8 @@ async def get_admin_customers(token: str = ""):
         key = o.get("email") or o.get("phone") or o.get("telegram")
         if key and key not in seen:
             seen.add(key)
+            order_count = 0
+            # Count orders for this customer
             customers.append({
                 "name": o.get("name", ""),
                 "phone": o.get("phone", ""),
@@ -472,14 +508,31 @@ async def send_admin_telegram_notification(order):
     
     try:
         import httpx
-        message = f"\U0001f697 Yeni VIN sifari\u015fi g\u0259ldi!\n\nVIN: {order['vin']}\nM\u00fc\u015ft\u0259ri: {order['name']}\n\u018flaq\u0259: {order.get('email') or order.get('telegram')}\nQiym\u0259t: {order.get('price_azn', 15)} AZN"
+        contact = order.get('email') or order.get('telegram') or order.get('phone')
+        delivery = "Email" if order.get('delivery_method') == 'email' else "Telegram"
+        message = (
+            f"\U0001f697 <b>Yeni VIN sifarişi gəldi!</b>\n\n"
+            f"<b>VIN:</b> <code>{order['vin']}</code>\n"
+            f"<b>Avtomobil:</b> {order.get('car_model', '-')}\n"
+            f"<b>Müştəri:</b> {order['name']}\n"
+            f"<b>Telefon:</b> {order.get('phone', '-')}\n"
+            f"<b>Əlaqə:</b> {contact}\n"
+            f"<b>Çatdırılma:</b> {delivery}\n"
+            f"<b>Qiymət:</b> {order.get('price_azn', 15)} AZN\n"
+            f"<b>Tracking:</b> <code>{order.get('tracking_code', '-')}</code>"
+        )
         
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
+        async with httpx.AsyncClient() as http_client:
+            resp = await http_client.post(
                 f"https://api.telegram.org/bot{bot_token}/sendMessage",
                 json={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
             )
-            return resp.status_code == 200
+            if resp.status_code == 200:
+                logger.info(f"Telegram notification sent for order {order.get('tracking_code')}")
+                return True
+            else:
+                logger.error(f"Telegram API error: {resp.status_code} - {resp.text}")
+                return False
     except Exception as e:
         logger.error(f"Telegram notification failed: {e}")
         return False

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Save, Clock, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Save, Clock, CheckCircle, Loader2, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export default function AdminOrderDetail() {
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!token) { navigate("/admin/login"); return; }
@@ -67,6 +68,25 @@ export default function AdminOrderDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Bu sifarişi silmək istədiyinizdən əminsiniz?")) return;
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/admin/orders/${orderId}?token=${token}`);
+      toast.success("Sifariş silindi");
+      navigate("/admin");
+    } catch (err) {
+      toast.error("Silinmə uğursuz");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Kopyalandı!");
+  };
+
   if (!order) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -80,41 +100,94 @@ export default function AdminOrderDetail() {
       {/* Header */}
       <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <Link to="/admin" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold">V</span>
               </div>
               <span className="font-bold text-sm" style={{fontFamily: 'Space Grotesk'}}>ADMIN</span>
             </Link>
+            <nav className="hidden md:flex items-center gap-4 text-sm">
+              <Link to="/admin" className="text-muted-foreground hover:text-foreground">Sifarişlər</Link>
+              <Link to="/admin/customers" className="text-muted-foreground hover:text-foreground">Müştərilər</Link>
+              <Link to="/admin/payments" className="text-muted-foreground hover:text-foreground">Ödənişlər</Link>
+              <Link to="/admin/settings" className="text-muted-foreground hover:text-foreground">Tənzim</Link>
+            </nav>
           </div>
         </div>
       </header>
 
       <div className="pt-24 pb-16 max-w-4xl mx-auto px-4 sm:px-6">
-        <Button variant="ghost" onClick={() => navigate('/admin')} className="mb-6 text-muted-foreground">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Geri
-        </Button>
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" onClick={() => navigate('/admin')} className="text-muted-foreground">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Geri
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+            <Trash2 className="w-4 h-4 mr-1" /> {deleting ? "Silinir..." : "Sil"}
+          </Button>
+        </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           {/* Order Info */}
           <div className="bg-card rounded-2xl border border-border p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold" style={{fontFamily: 'Space Grotesk'}}>Sifariş Detalı</h1>
-              <code className="font-mono-vin text-xs text-primary bg-primary/10 px-2 py-1 rounded">{order.tracking_code}</code>
+              <div className="flex items-center gap-2">
+                <code className="font-mono-vin text-xs text-primary bg-primary/10 px-2 py-1 rounded">{order.tracking_code}</code>
+                <button onClick={() => copyToClipboard(order.tracking_code)} className="p-1 rounded hover:bg-accent">
+                  <Copy className="w-3 h-3 text-muted-foreground" />
+                </button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div><span className="text-muted-foreground">VIN:</span> <span className="font-mono-vin ml-2">{order.vin}</span></div>
-              <div><span className="text-muted-foreground">Avtomobil:</span> <span className="ml-2">{order.car_model}</span></div>
-              <div><span className="text-muted-foreground">Müştəri:</span> <span className="ml-2">{order.name}</span></div>
-              <div><span className="text-muted-foreground">Telefon:</span> <span className="ml-2">{order.phone}</span></div>
-              <div><span className="text-muted-foreground">Email:</span> <span className="ml-2">{order.email || '-'}</span></div>
-              <div><span className="text-muted-foreground">Telegram:</span> <span className="ml-2">{order.telegram || '-'}</span></div>
-              <div><span className="text-muted-foreground">Çatdırılma:</span> <span className="ml-2 capitalize">{order.delivery_method}</span></div>
-              <div><span className="text-muted-foreground">Qiymət:</span> <span className="ml-2 text-primary font-bold">{order.price_azn} AZN</span></div>
-              <div><span className="text-muted-foreground">Ödəniş:</span> <span className={`ml-2 ${order.payment_status === 'paid' ? 'text-green-400' : 'text-red-400'}`}>{order.payment_status === 'paid' ? 'Ödənilib' : 'Gözləyir'}</span></div>
-              <div><span className="text-muted-foreground">Tarix:</span> <span className="ml-2">{new Date(order.created_at).toLocaleString('az-AZ')}</span></div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">VIN</span>
+                <div className="font-mono-vin flex items-center gap-2">
+                  {order.vin}
+                  <button onClick={() => copyToClipboard(order.vin)} className="p-1 rounded hover:bg-accent">
+                    <Copy className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Avtomobil</span>
+                <div>{order.car_model}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Müştəri</span>
+                <div>{order.name}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Telefon</span>
+                <div>{order.phone}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Email</span>
+                <div>{order.email || '-'}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Telegram</span>
+                <div>{order.telegram || '-'}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Çatdırılma üsulu</span>
+                <div className="capitalize">{order.delivery_method}</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Qiymət</span>
+                <div className="text-primary font-bold">{order.price_azn} AZN</div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Ödəniş</span>
+                <div className={order.payment_status === 'paid' ? 'text-green-400' : 'text-red-400'}>
+                  {order.payment_status === 'paid' ? 'Ödənilib' : 'Gözləyir'}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Tarix</span>
+                <div>{new Date(order.created_at).toLocaleString('az-AZ')}</div>
+              </div>
             </div>
           </div>
 
@@ -160,7 +233,7 @@ export default function AdminOrderDetail() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
                 onClick={handleSave}
                 disabled={saving}
@@ -177,6 +250,12 @@ export default function AdminOrderDetail() {
                 <Send className="w-4 h-4 mr-2" /> {sending ? "Göndərilir..." : "Nəticəni göndər"}
               </Button>
             </div>
+
+            {order.sent_at && (
+              <p className="text-xs text-green-400 mt-3">
+                Göndərilmə tarixi: {new Date(order.sent_at).toLocaleString('az-AZ')}
+              </p>
+            )}
           </div>
         </motion.div>
       </div>

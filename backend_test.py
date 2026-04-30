@@ -227,6 +227,94 @@ class VINCheckAPITester:
         update_data = {"status": "yoxlanılır", "result_text": "Test result text"}
         return self.run_test("Admin Update Order", "PUT", f"admin/orders/{self.test_order_id}", 200, update_data, use_token_param=True)
 
+    def test_admin_search_by_vin(self):
+        """Test admin search by VIN"""
+        if not self.admin_token:
+            print("❌ No admin token available")
+            return False
+            
+        search_params = {"token": self.admin_token, "search": "1HGCM82633A004329"}
+        success, response = self.run_test("Admin Search by VIN", "GET", "admin/orders", 200, search_params)
+        if success:
+            print(f"   Found {len(response)} orders matching VIN")
+        return success
+
+    def test_admin_send_result(self):
+        """Test admin send result"""
+        if not self.admin_token or not self.test_order_id:
+            print("❌ No admin token or order ID available")
+            return False
+            
+        # Use direct request for POST with token parameter
+        url = f"{self.base_url}/admin/orders/{self.test_order_id}/send?token={self.admin_token}"
+        self.tests_run += 1
+        print(f"\n🔍 Testing Admin Send Result...")
+        print(f"   URL: {url}")
+        
+        try:
+            response = requests.post(url)
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                result = response.json()
+                print(f"   Message: {result.get('message', 'N/A')}")
+                return True
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_admin_delete_order(self):
+        """Test admin delete order"""
+        if not self.admin_token:
+            print("❌ No admin token available")
+            return False
+            
+        # Create a new order to delete
+        test_order = {
+            "vin": "2HGCM82633A004330",
+            "car_model": "Toyota Camry 2021",
+            "name": "Delete Test User",
+            "phone": "+994501234568",
+            "email": "delete@example.com",
+            "delivery_method": "email"
+        }
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Create Order for Delete...")
+        print(f"   URL: {self.base_url}/orders")
+        
+        try:
+            response = requests.post(f"{self.base_url}/orders", json=test_order)
+            if response.status_code != 200:
+                print(f"❌ Failed to create order for delete test")
+                return False
+            
+            delete_order_id = response.json().get("order_id")
+            print(f"✅ Passed - Order created: {delete_order_id}")
+            
+            # Now delete it
+            self.tests_run += 1
+            print(f"\n🔍 Testing Admin Delete Order...")
+            url = f"{self.base_url}/admin/orders/{delete_order_id}?token={self.admin_token}"
+            print(f"   URL: {url}")
+            
+            response = requests.delete(url)
+            if response.status_code == 200:
+                self.tests_passed += 2  # Both create and delete passed
+                print(f"✅ Passed - Order deleted successfully")
+                return True
+            else:
+                self.tests_passed += 1  # Only create passed
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
 def main():
     print("🚀 Starting VINCheck API Tests")
     print("=" * 50)
@@ -257,6 +345,9 @@ def main():
     tester.test_admin_payments()
     tester.test_admin_order_detail()
     tester.test_admin_update_order()
+    tester.test_admin_search_by_vin()
+    tester.test_admin_send_result()
+    tester.test_admin_delete_order()
     
     # Results
     print("\n" + "=" * 50)
