@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
           <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
             <span className="text-primary-foreground font-bold text-3xl">V</span>
           </div>
-          <h2 className="text-3xl font-bold mb-3">VINCHECK</h2>
+          <h2 className="text-3xl font-bold mb-3">VINCODE</h2>
           <p className="text-muted-foreground">Admin idarəetmə paneli</p>
         </div>
       </div>

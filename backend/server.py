@@ -19,10 +19,10 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ.get('DB_NAME', 'vincheck_db')]
+db = client[os.environ.get('DB_NAME', 'vincode_db')]
 
 # JWT Secret
-JWT_SECRET = os.environ.get('JWT_SECRET', 'vincheck-secret-key-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'vincode-secret-key-2024')
 JWT_ALGORITHM = 'HS256'
 
 # Create the main app
@@ -145,7 +145,7 @@ async def init_admin():
 async def startup():
     await init_admin()
     await get_settings()
-    logger.info("VINCheck backend started")
+    logger.info("VINCODE backend started")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -155,7 +155,7 @@ async def shutdown_db_client():
 
 @api_router.get("/")
 async def root():
-    return {"message": "VINCheck API"}
+    return {"message": "VINCODE API"}
 
 @api_router.get("/settings/public")
 async def get_public_settings():
@@ -580,7 +580,7 @@ async def send_customer_email(order):
         msg['To'] = order['email']
         msg['Subject'] = f"VIN Yoxlama N\u0259tic\u0259si - {order['vin']}"
         
-        body = f"""Salam {order['name']},\n\nVIN yoxlama n\u0259tic\u0259niz haz\u0131rd\u0131r:\n\nVIN: {order['vin']}\nAvtomobil: {order['car_model']}\n\nN\u0259tic\u0259:\n{order.get('result_text', '')}\n\nH\u00f6rm\u0259tl\u0259,\nVINCheck Komandas\u0131"""
+        body = f"""Salam {order['name']},\n\nVIN yoxlama n\u0259tic\u0259niz haz\u0131rd\u0131r:\n\nVIN: {order['vin']}\nAvtomobil: {order['car_model']}\n\nN\u0259tic\u0259:\n{order.get('result_text', '')}\n\nH\u00f6rm\u0259tl\u0259,\nVINCODE Komandas\u0131"""
         
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         

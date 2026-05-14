@@ -25,7 +25,7 @@ export default function HomePage() {
               <span className="text-primary-foreground font-bold text-lg">V</span>
             </div>
             <span className="font-bold text-lg text-foreground" style={{fontFamily: 'Space Grotesk'}}>
-              VIN<span className="text-primary">CHECK</span>
+              VIN<span className="text-primary">CODE</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -184,9 +184,9 @@ export default function HomePage() {
             <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">V</span>
             </div>
-            <span className="font-bold text-sm">VINCHECK</span>
+            <span className="font-bold text-sm">VINCODE</span>
           </div>
-          <p className="text-xs text-muted-foreground">© 2024 VINCheck. Bütün hüquqlar qorunur.</p>
+          <p className="text-xs text-muted-foreground">© 2024 VINCODE. Bütün hüquqlar qorunur.</p>
           <Link to="/admin/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Admin</Link>
         </div>
       </footer>

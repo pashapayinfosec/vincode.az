@@ -59,7 +59,7 @@ export default function TrackingPage() {
             <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">V</span>
             </div>
-            <span className="font-bold text-lg" style={{fontFamily: 'Space Grotesk'}}>VIN<span className="text-primary">CHECK</span></span>
+            <span className="font-bold text-lg" style={{fontFamily: 'Space Grotesk'}}>VIN<span className="text-primary">CODE</span></span>
           </Link>
         </div>
       </header>
