@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
+const API = "/api";
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -35,8 +34,8 @@ export default function AdminDashboard() {
         axios.get(`${API}/admin/stats?token=${token}`),
         axios.get(`${API}/admin/orders?${params.toString()}`)
       ]);
-      setStats(statsRes.data);
-      setOrders(ordersRes.data);
+     setStats(statsRes.data || {});
+setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data.orders || []));
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem("admin_token");
